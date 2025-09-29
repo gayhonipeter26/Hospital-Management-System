@@ -14,14 +14,18 @@ class DashboardTest extends TestCase
     {
         $response = $this->get(route('dashboard'));
         $response->assertRedirect(route('login'));
-    }
+    }public function test_authenticated_users_can_visit_the_dashboard()
+{
+    // Create a user with the 'admin' role
+    $user = User::factory()->create([
+        'role' => 'admin', // must match your admin middleware check
+    ]);
 
-    public function test_authenticated_users_can_visit_the_dashboard()
-    {
-        $user = User::factory()->create();
-        $this->actingAs($user);
+    $this->actingAs($user);
 
-        $response = $this->get(route('dashboard'));
-        $response->assertStatus(200);
-    }
+    $response = $this->get(route('dashboard'));
+
+    $response->assertStatus(200); // should pass now
+}
+
 }

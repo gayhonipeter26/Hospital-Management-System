@@ -12,7 +12,9 @@ return new class extends Migration
     public function up()
     {
         Schema::table('patients', function (Blueprint $table) {
-            $table->string('phone_code')->default('+254')->after('last_name');
+            if (!Schema::hasColumn('patients', 'phone_code')) {
+                $table->string('phone_code')->default('+254');
+            }
         });
     }
 
