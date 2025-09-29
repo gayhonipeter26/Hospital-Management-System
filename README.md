@@ -21,3 +21,10 @@ This is a Hospital Management System built with **Laravel 12** (backend) and **V
 - **Charts**: Chart.js / ApexCharts
 - **Calendar**: FullCalendar.js
 - **Database**: MySQL
+
+## Installation
+
+1. Clone the repository:
+   ```bash
+   git clone https://github.com/YOUR_USERNAME/hospital-management-system.git
+   cd hospital-management-system
