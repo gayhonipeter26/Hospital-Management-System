@@ -1,13 +1,14 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
 import { useForm, Link } from '@inertiajs/vue3'
+import { ref } from 'vue'
 
 const props = defineProps({ patient: Object })
 
 const form = useForm({
   first_name: props.patient.first_name,
   last_name: props.patient.last_name,
-  phone_code: props.patient.phone_code || '+254', // default if missing
+  phone_code: props.patient.phone_code || '+254',
   phone: props.patient.phone,
   email: props.patient.email,
   gender: props.patient.gender,
@@ -23,6 +24,35 @@ const form = useForm({
   religion: props.patient.religion,
   notes: props.patient.notes,
 })
+
+// Country & Nationality dropdown data
+const countries = ref(['Kenya', 'Uganda', 'Tanzania', 'Rwanda', 'Nigeria', 'USA', 'UK', 'India'])
+const nationalities = ref(['Kenyan', 'Ugandan', 'Tanzanian', 'Rwandan', 'Nigerian', 'American', 'British', 'Indian'])
+
+const newCountry = ref('')
+const newNationality = ref('')
+const showAddCountry = ref(false)
+const showAddNationality = ref(false)
+
+// Add country if not duplicate
+const addCountry = () => {
+  if (newCountry.value.trim() !== '' && !countries.value.includes(newCountry.value.trim())) {
+    countries.value.push(newCountry.value.trim())
+    form.country = newCountry.value.trim()
+    newCountry.value = ''
+    showAddCountry.value = false
+  }
+}
+
+// Add nationality if not duplicate
+const addNationality = () => {
+  if (newNationality.value.trim() !== '' && !nationalities.value.includes(newNationality.value.trim())) {
+    nationalities.value.push(newNationality.value.trim())
+    form.nationality = newNationality.value.trim()
+    newNationality.value = ''
+    showAddNationality.value = false
+  }
+}
 
 const submit = () => {
   form.put(`/patients/${props.patient.id}`)
@@ -41,7 +71,6 @@ const submit = () => {
       <!-- Form -->
       <div class="bg-white dark:bg-gray-800 shadow rounded-lg p-6">
         <form @submit.prevent="submit" class="grid grid-cols-1 md:grid-cols-2 gap-4">
-
           <!-- First Name -->
           <div>
             <label class="block text-sm text-white">First Name <span class="text-red-500">*</span></label>
@@ -60,7 +89,6 @@ const submit = () => {
           <div>
             <label class="block text-sm text-white">Phone <span class="text-red-500">*</span></label>
             <div class="flex">
-              <!-- Country Code Dropdown -->
               <select v-model="form.phone_code" class="border p-2 rounded-l dark:bg-gray-700 dark:text-gray-200">
                 <option value="+254">🇰🇪 +254 (Kenya)</option>
                 <option value="+256">🇺🇬 +256 (Uganda)</option>
@@ -71,13 +99,12 @@ const submit = () => {
                 <option value="+44">🇬🇧 +44 (UK)</option>
                 <option value="+91">🇮🇳 +91 (India)</option>
               </select>
-              <!-- Phone Input -->
               <input v-model="form.phone" type="text" placeholder="712345678" class="border p-2 rounded-r w-full dark:bg-gray-700 dark:text-gray-200" required />
             </div>
             <span v-if="form.errors.phone" class="text-red-500 text-sm">{{ form.errors.phone }}</span>
           </div>
 
-          <!-- Email (optional) -->
+          <!-- Email -->
           <div>
             <label class="block text-sm text-white">Email</label>
             <input v-model="form.email" type="email" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
@@ -92,17 +119,15 @@ const submit = () => {
               <option>Male</option>
               <option>Female</option>
             </select>
-            <span v-if="form.errors.gender" class="text-red-500 text-sm">{{ form.errors.gender }}</span>
           </div>
 
           <!-- DOB -->
           <div>
             <label class="block text-sm text-white">Date of Birth <span class="text-red-500">*</span></label>
             <input v-model="form.dob" type="date" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" required />
-            <span v-if="form.errors.dob" class="text-red-500 text-sm">{{ form.errors.dob }}</span>
           </div>
 
-          <!-- Blood Type (optional) -->
+          <!-- Blood Type -->
           <div>
             <label class="block text-sm text-white">Blood Type</label>
             <select v-model="form.blood_type" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200">
@@ -118,7 +143,7 @@ const submit = () => {
             </select>
           </div>
 
-          <!-- Marital Status (optional) -->
+          <!-- Marital Status -->
           <div>
             <label class="block text-sm text-white">Marital Status</label>
             <select v-model="form.marital_status" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200">
@@ -134,49 +159,61 @@ const submit = () => {
           <div>
             <label class="block text-sm text-white">ID Number <span class="text-red-500">*</span></label>
             <input v-model="form.id_number" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" required />
-            <span v-if="form.errors.id_number" class="text-red-500 text-sm">{{ form.errors.id_number }}</span>
           </div>
 
-          <!-- Nationality -->
+          <!-- Nationality (dropdown + add new) -->
           <div>
             <label class="block text-sm text-white">Nationality <span class="text-red-500">*</span></label>
-            <input v-model="form.nationality" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" required />
-            <span v-if="form.errors.nationality" class="text-red-500 text-sm">{{ form.errors.nationality }}</span>
+            <select v-model="form.nationality" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200">
+              <option value="">Select Nationality</option>
+              <option v-for="nat in nationalities" :key="nat">{{ nat }}</option>
+              <option value="add-new">➕ Add New</option>
+            </select>
+            <div v-if="form.nationality === 'add-new' || showAddNationality" class="flex mt-2 space-x-2">
+              <input v-model="newNationality" type="text" placeholder="Enter new nationality" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
+              <button type="button" @click="addNationality" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Save</button>
+            </div>
           </div>
 
           <!-- Residence -->
           <div>
             <label class="block text-sm text-white">Residence <span class="text-red-500">*</span></label>
             <input v-model="form.residence" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" required />
-            <span v-if="form.errors.residence" class="text-red-500 text-sm">{{ form.errors.residence }}</span>
           </div>
 
-          <!-- City (optional) -->
+          <!-- City -->
           <div>
             <label class="block text-sm text-white">City</label>
             <input v-model="form.city" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
           </div>
 
-          <!-- Country -->
+          <!-- Country (dropdown + add new, optional) -->
           <div>
-            <label class="block text-sm text-white">Country <span class="text-red-500">*</span></label>
-            <input v-model="form.country" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" required />
-            <span v-if="form.errors.country" class="text-red-500 text-sm">{{ form.errors.country }}</span>
+            <label class="block text-sm text-white">Country</label>
+            <select v-model="form.country" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200">
+              <option value="">Select Country</option>
+              <option v-for="c in countries" :key="c">{{ c }}</option>
+              <option value="add-new">➕ Add New</option>
+            </select>
+            <div v-if="form.country === 'add-new' || showAddCountry" class="flex mt-2 space-x-2">
+              <input v-model="newCountry" type="text" placeholder="Enter new country" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
+              <button type="button" @click="addCountry" class="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded">Save</button>
+            </div>
           </div>
 
-          <!-- Occupation (optional) -->
+          <!-- Occupation -->
           <div>
             <label class="block text-sm text-white">Occupation</label>
             <input v-model="form.occupation" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
           </div>
 
-          <!-- Religion (optional) -->
+          <!-- Religion -->
           <div>
             <label class="block text-sm text-white">Religion</label>
             <input v-model="form.religion" type="text" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200" />
           </div>
 
-          <!-- Notes (optional) -->
+          <!-- Notes -->
           <div class="md:col-span-2">
             <label class="block text-sm text-white">Notes</label>
             <textarea v-model="form.notes" rows="3" class="border p-2 rounded w-full dark:bg-gray-700 dark:text-gray-200"></textarea>

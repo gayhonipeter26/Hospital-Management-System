@@ -5,12 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Patient;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
+use Carbon\Carbon;
 
 class PatientController extends Controller
 {
-    /**
-     * Display a listing of the patients with search.
-     */
     public function index(Request $request)
     {
         $search = $request->input('search');
@@ -36,41 +34,54 @@ class PatientController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new patient.
-     */
+    // ✅ Show Patient Creation Page
     public function create()
     {
         return Inertia::render('Patients/Create');
     }
 
-    /**
-     * Store a newly created patient in storage.
-     */
+    // ✅ Store Patient and redirect to visits.create with pre-selected patient
     public function store(Request $request)
     {
         $validated = $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
             'phone_code'  => 'required|string',
-            'phone'       => 'required|string',
+            'phone'       => [
+                'required',
+                'regex:/^[0-9]+$/',
+            ],
             'gender'      => 'required|string',
             'dob'         => 'required|date',
-            'id_number'   => 'required|string|unique:patients',
+            'id_number'   => 'nullable|string|unique:patients,id_number',
             'nationality' => 'required|string',
             'residence'   => 'required|string',
-            'country'     => 'required|string',
+            'country'     => 'nullable|string',
             'email'       => 'nullable|email',
         ]);
 
-        Patient::create($validated);
+        // ✅ Calculate age from DOB
+        $age = Carbon::parse($validated['dob'])->age;
 
-        return redirect()->route('patients.index')->with('success', 'Patient created successfully.');
+        if ($age >= 18 && empty($request->id_number)) {
+            return back()
+                ->withErrors(['id_number' => 'ID number is required for adults (18 years and above).'])
+                ->withInput();
+        }
+
+        if (empty($validated['id_number'])) {
+            $validated['id_number'] = null;
+        }
+
+        // ✅ Create patient
+        $patient = Patient::create($validated);
+
+        // ✅ Redirect to visits.create with pre-selected patient
+        return redirect()
+            ->route('visits.create', ['patient_id' => $patient->id])
+            ->with('success', 'Patient saved successfully.');
     }
 
-    /**
-     * Display the specified patient.
-     */
     public function show(Patient $patient)
     {
         return Inertia::render('Patients/Show', [
@@ -78,9 +89,6 @@ class PatientController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for editing the specified patient.
-     */
     public function edit(Patient $patient)
     {
         return Inertia::render('Patients/Edit', [
@@ -88,22 +96,50 @@ class PatientController extends Controller
         ]);
     }
 
-    /**
-     * Update the specified patient in storage.
-     */
     public function update(Request $request, Patient $patient)
     {
         $validated = $request->validate([
             'first_name'  => 'required|string|max:255',
             'last_name'   => 'required|string|max:255',
             'phone_code'  => 'required|string',
-            'phone'       => 'required|string',
+            'phone'       => [
+                'required',
+                'regex:/^[0-9]+$/',
+                function ($attribute, $value, $fail) use ($request) {
+                    $rules = [
+                        '+254' => 9,
+                        '+256' => 9,
+                        '+255' => 9,
+                        '+250' => 9,
+                        '+234' => 10,
+                        '+1'   => 10,
+                        '+44'  => 10,
+                        '+91'  => 10,
+                    ];
+                    $code = $request->input('phone_code');
+                    if (isset($rules[$code]) && strlen($value) !== $rules[$code]) {
+                        $fail("The phone number must be {$rules[$code]} digits for {$code}.");
+                    }
+                }
+            ],
             'gender'      => 'required|string',
             'dob'         => 'required|date',
-            'id_number'   => 'required|string|unique:patients,id_number,' . $patient->id,
+            'id_number'   => [
+                'nullable',
+                'string',
+                'unique:patients,id_number,' . $patient->id,
+                function ($attribute, $value, $fail) use ($request) {
+                    if ($request->dob) {
+                        $age = Carbon::parse($request->dob)->age;
+                        if ($age >= 18 && empty($value)) {
+                            $fail('The ID number is required for adults.');
+                        }
+                    }
+                }
+            ],
             'nationality' => 'required|string',
             'residence'   => 'required|string',
-            'country'     => 'required|string',
+            'country'     => 'nullable|string',
             'email'       => 'nullable|email',
         ]);
 
@@ -112,19 +148,12 @@ class PatientController extends Controller
         return redirect()->route('patients.index')->with('success', 'Patient updated successfully.');
     }
 
-    /**
-     * Archive (soft delete) the specified patient.
-     */
     public function destroy(Patient $patient)
     {
         $patient->delete();
-
         return redirect()->route('patients.archive')->with('success', 'Patient archived successfully.');
     }
 
-    /**
-     * Display archived patients.
-     */
     public function archive(Request $request)
     {
         $search = $request->input('search');
@@ -150,9 +179,6 @@ class PatientController extends Controller
         ]);
     }
 
-    /**
-     * Restore a soft-deleted patient.
-     */
     public function restore($id)
     {
         $patient = Patient::onlyTrashed()->findOrFail($id);
@@ -161,9 +187,6 @@ class PatientController extends Controller
         return redirect()->route('patients.index')->with('success', 'Patient restored successfully.');
     }
 
-    /**
-     * Permanently delete a patient.
-     */
     public function forceDelete($id)
     {
         $patient = Patient::onlyTrashed()->findOrFail($id);

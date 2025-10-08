@@ -7,7 +7,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Patient extends Model
 {
-    use SoftDeletes; // ✅ Enable soft deletes
+    use SoftDeletes;
 
     protected $fillable = [
         'first_name',
@@ -29,15 +29,33 @@ class Patient extends Model
         'notes',
     ];
 
-    // ✅ Automatically append these attributes
-    protected $appends = ['full_phone'];
+    // Append virtual attributes automatically
+    protected $appends = ['full_phone', 'full_name'];
 
-    // ✅ Cast deleted_at as datetime
-    protected $dates = ['deleted_at'];
+    // Cast dates
+    protected $dates = ['deleted_at', 'dob'];
 
-    // ✅ Virtual attribute: full_phone
+    /**
+     * Relationship: A patient has many visits
+     */
+    public function visits()
+    {
+        return $this->hasMany(Visit::class);
+    }
+
+    /**
+     * Accessor: Full phone number
+     */
     public function getFullPhoneAttribute()
     {
         return "{$this->phone_code}{$this->phone}";
+    }
+
+    /**
+     * Accessor: Full name (first + last)
+     */
+    public function getFullNameAttribute()
+    {
+        return trim("{$this->first_name} {$this->last_name}");
     }
 }

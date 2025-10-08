@@ -1,301 +1,435 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue'
-import { ref, computed } from "vue";
-import { Link } from "@inertiajs/vue3";
+import { ref } from "vue"
+import { Link } from "@inertiajs/vue3"
 
-// Icons
-import { UserIcon, ClipboardDocumentListIcon, PencilSquareIcon, PlusCircleIcon } from "@heroicons/vue/24/outline";
+defineProps({ patient: Object })
 
-defineProps({ patient: Object });
-
-const activeTab = ref("basic");
+// Tab state
+const activeTab = ref("basic")
 
 // Modal state
-const showModal = ref(false);
-const modalTab = ref(null);
-const isEditing = ref(false);
+const showModal = ref(false)
+const currentTab = ref("")
 
-// Form fields (shared)
-const form = ref({
-  field1: '',
-  field2: '',
-  notes: ''
-});
-
-// Open modal for a tab (add/edit)
-const openModal = (tab, edit = false, data = null) => {
-  modalTab.value = tab;
-  isEditing.value = edit;
-
-  if (edit && data) {
-    // Pre-fill form with existing data
-    form.value = { ...data };
-  } else {
-    // Reset form for new entry
-    form.value = { field1: '', field2: '', notes: '' };
-  }
-
-  showModal.value = true;
-};
-
-// Submit handler
-const submitForm = () => {
-  console.log(isEditing.value ? "Editing" : "Adding", "for:", modalTab.value, form.value);
-  // Example for Inertia:
-  // if (isEditing.value) {
-  //   Inertia.put(`/patients/${patient.id}/${modalTab.value}/${form.value.id}`, form.value)
-  // } else {
-  //   Inertia.post(`/patients/${patient.id}/${modalTab.value}`, form.value)
-  // }
-  showModal.value = false;
-};
-
-// Dynamic modal title
-const modalTitle = computed(() => {
-  const titles = {
-    basic: isEditing.value ? "Edit Basic Info" : "Add Basic Info",
-    identifiers: isEditing.value ? "Edit Identifier" : "Add Identifier",
-    visits: isEditing.value ? "Edit Visit" : "Add Visit Record",
-    vitals: isEditing.value ? "Edit Vitals" : "Add Vitals Record",
-    records: isEditing.value ? "Edit Record" : "Add Medical Record",
-    prescriptions: isEditing.value ? "Edit Prescription" : "Add Prescription",
-    labs: isEditing.value ? "Edit Lab Test" : "Add Lab Test",
-    procedures: isEditing.value ? "Edit Procedure" : "Add Procedure",
-    billing: isEditing.value ? "Edit Billing" : "Add Billing Record",
-  };
-  return titles[modalTab.value] || "Add Record";
-});
+function openModal(tab) {
+  currentTab.value = tab
+  showModal.value = true
+}
+function closeModal() {
+  showModal.value = false
+  currentTab.value = ""
+}
 </script>
 
 <template>
   <AppLayout>
     <div class="p-6 space-y-6">
-      <!-- Header -->
-      <div class="flex justify-between items-center">
-        <h1 class="text-xl font-bold">Patient Details</h1>
-        <div class="space-x-2">
-          <Link
-            :href="`/patients/${patient.id}/edit`"
-            class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Edit Patient
-          </Link>
-          <Link
-            href="/patients"
-            class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
-          >
-            Back
-          </Link>
+      <!-- Back Link -->
+      <div class="mb-4">
+        <Link href="/patients" class="text-blue-600 hover:underline">&larr; Back to Patients</Link>
+      </div>
+
+      <!-- Top Section -->
+      <div class="grid grid-cols-3 gap-6">
+
+        <!-- Profile -->
+        <div class="col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex flex-col items-center">
+          <img
+            :src="`https://ui-avatars.com/api/?name=${patient.first_name}+${patient.last_name}&background=0D8ABC&color=fff`"
+            alt="Avatar" class="w-20 h-20 rounded-full mb-3" />
+          <h2 class="font-bold text-lg">{{ patient.first_name }} {{ patient.last_name }}</h2>
+          <p class="text-gray-500 text-sm">{{ patient.email ?? 'No email' }}</p>
+        </div>
+
+        <!-- Patient Info -->
+        <div class="col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div class="grid grid-cols-2 gap-3 text-sm">
+            <p><strong>Gender:</strong> {{ patient.gender }}</p>
+            <p><strong>DOB:</strong> {{ patient.dob }}</p>
+            <p><strong>Phone:</strong> {{ patient.phone_code }} {{ patient.phone }}</p>
+            <p><strong>Address:</strong> {{ patient.residence }}</p>
+            <p><strong>City:</strong> {{ patient.city ?? 'N/A' }}</p>
+            <p><strong>Country:</strong> {{ patient.country }}</p>
+          </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow flex flex-col">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="font-semibold">Notes</h2>
+            <button @click="openModal('notes')" class="text-blue-600 text-sm">Edit</button>
+          </div>
+          <p class="text-sm">{{ patient.notes ?? "No notes added." }}</p>
         </div>
       </div>
 
-      <!-- Patient Summary -->
-      <div class="grid grid-cols-3 gap-4 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
-        <div>
-          <p class="font-bold text-lg">
-            {{ patient.first_name }} {{ patient.last_name }}
-          </p>
-          <p><strong>Gender:</strong> {{ patient.gender ?? 'N/A' }}</p>
-          <p><strong>Patient No:</strong> {{ patient.id }}</p>
-          <p><strong>D.O.B:</strong> {{ patient.dob ?? 'N/A' }}</p>
-          <p><strong>Contact:</strong> {{ patient.phone ?? 'N/A' }}</p>
+      <!-- Middle Section with Tabs -->
+      <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+        <div class="flex gap-4 border-b mb-4 overflow-x-auto">
+          <button @click="activeTab = 'basic'"
+            :class="activeTab === 'basic' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Basic
+            Info</button>
+          <button @click="activeTab = 'identifiers'"
+            :class="activeTab === 'identifiers' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Identifiers</button>
+          <button @click="activeTab = 'medical'"
+            :class="activeTab === 'medical' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Medical
+            Info</button>
+          <button @click="activeTab = 'visits'"
+            :class="activeTab === 'visits' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Visits</button>
+          <button @click="activeTab = 'vitals'"
+            :class="activeTab === 'vitals' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Vitals</button>
+          <button @click="activeTab = 'billing'"
+            :class="activeTab === 'billing' ? 'border-b-2 border-blue-600 font-semibold' : 'text-gray-500'">Billing</button>
+        </div>
+
+        <!-- Tab Content -->
+        <div v-if="activeTab === 'basic'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Basic Info</h2>
+            <button @click="openModal('basic')" class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p><strong>Name:</strong> {{ patient.first_name }} {{ patient.last_name }}</p>
+          <p><strong>Email:</strong> {{ patient.email ?? "N/A" }}</p>
+          <p><strong>Phone:</strong> {{ patient.phone_code }} {{ patient.phone }}</p>
+        </div>
+
+        <div v-if="activeTab === 'identifiers'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Identifiers</h2>
+            <button @click="openModal('identifiers')"
+              class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p><strong>ID Number:</strong> {{ patient.id_number }}</p>
+          <p><strong>Nationality:</strong> {{ patient.nationality }}</p>
+        </div>
+
+        <div v-if="activeTab === 'medical'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Medical Info</h2>
+            <button @click="openModal('medical')" class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p><strong>DOB:</strong> {{ patient.dob }}</p>
+          <p><strong>Blood Type:</strong> {{ patient.blood_type ?? 'N/A' }}</p>
+          <p><strong>Marital Status:</strong> {{ patient.marital_status ?? 'N/A' }}</p>
+          <p><strong>Occupation:</strong> {{ patient.occupation ?? 'N/A' }}</p>
+        </div>
+
+        <div v-if="activeTab === 'visits'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Visits</h2>
+            <button @click="openModal('visits')" class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p>No visits yet...</p>
+        </div>
+
+        <div v-if="activeTab === 'vitals'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Vitals</h2>
+            <button @click="openModal('vitals')" class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p>No vitals recorded...</p>
+        </div>
+
+        <div v-if="activeTab === 'billing'" class="space-y-2 text-sm">
+          <div class="flex justify-between items-center">
+            <h2 class="font-semibold">Billing</h2>
+            <button @click="openModal('billing')" class="px-2 py-1 bg-blue-600 text-white rounded text-xs">Edit</button>
+          </div>
+          <p>No billing info yet...</p>
         </div>
       </div>
 
-      <!-- Tabs -->
-      <div class="flex flex-col gap-6">
-        <!-- Patient Info Tabs -->
-        <div>
-          <div class="flex items-center gap-2 mb-2 text-gray-500 font-medium uppercase text-sm">
-            <UserIcon class="h-5 w-5" /> Patient Info
+      <!-- Files + Payments -->
+      <div class="grid grid-cols-3 gap-6">
+        <!-- Files -->
+        <div class="col-span-2 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <div class="flex justify-between items-center mb-3">
+            <h2 class="font-semibold">Files / Documents</h2>
+            <button @click="openModal('files')" class="text-blue-600 text-sm">Add files</button>
           </div>
-          <div role="tablist" class="flex gap-6 border-b pb-2 text-sm">
-            <button
-              v-for="tab in [
-                { key:'basic', label:'Basic Info' },
-                { key:'identifiers', label:'Identifiers' },
-                { key:'contacts', label:'Emergency Contacts' },
-                { key:'localities', label:'Localities' },
-                { key:'address', label:'Address Details' },
-                { key:'nextkin', label:'Next of Kin' }
-              ]"
-              :key="tab.key"
-              @click="activeTab = tab.key"
-              :class="activeTab === tab.key 
-                ? 'border-b-2 border-blue-500 text-blue-600 font-semibold' 
-                : 'text-gray-600 dark:text-gray-300 hover:text-blue-500'"
-              class="pb-1"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
+          <p class="text-sm">No files uploaded.</p>
         </div>
 
-        <!-- Medical Records Tabs -->
-        <div>
-          <div class="flex items-center gap-2 mb-2 text-gray-500 font-medium uppercase text-sm">
-            <ClipboardDocumentListIcon class="h-5 w-5" /> Medical Records
-          </div>
-          <div role="tablist" class="flex gap-6 border-b pb-2 text-sm">
-            <button
-              v-for="tab in [
-                { key:'visits', label:'Visits' },
-                { key:'vitals', label:'Vitals' },
-                { key:'records', label:'Medical Records' },
-                { key:'prescriptions', label:'Prescriptions' },
-                { key:'labs', label:'Lab Tests' },
-                { key:'procedures', label:'Procedures' },
-                { key:'billing', label:'Billing' }
-              ]"
-              :key="tab.key"
-              @click="activeTab = tab.key"
-              :class="activeTab === tab.key 
-                ? 'border-b-2 border-blue-500 text-blue-600 font-semibold' 
-                : 'text-gray-600 dark:text-gray-300 hover:text-blue-500'"
-              class="pb-1"
-            >
-              {{ tab.label }}
-            </button>
-          </div>
+        <!-- Payments -->
+        <div class="col-span-1 bg-white dark:bg-gray-800 p-6 rounded-lg shadow">
+          <h2 class="font-semibold mb-3">Payments</h2>
+          <p class="text-sm">No payments recorded yet.</p>
         </div>
       </div>
 
-      <!-- Tab Content -->
-      <div class="p-6 bg-white dark:bg-gray-800 rounded-lg shadow mt-2">
-        <!-- Basic Info -->
-        <div v-if="activeTab === 'basic'">
-          <h2 class="text-lg font-semibold mb-4">Basic Info</h2>
-          <p><strong>Gender:</strong> {{ patient.gender ?? 'N/A' }}</p>
-          <div class="flex gap-2 mt-4">
-            <button @click="openModal('basic')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1">
-              <PlusCircleIcon class="h-5 w-5" /> Add
-            </button>
-            <button v-if="patient.gender" @click="openModal('basic', true, { field1: patient.gender })" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 flex items-center gap-1">
-              <PencilSquareIcon class="h-5 w-5" /> Edit
-            </button>
-          </div>
-        </div>
-
-        <!-- Identifiers -->
-        <div v-if="activeTab === 'identifiers'">
-          <h2 class="text-lg font-semibold mb-4">Identifiers</h2>
-          <p><strong>ID Number:</strong> {{ patient.id_number ?? 'N/A' }}</p>
-          <div class="flex gap-2 mt-4">
-            <button @click="openModal('identifiers')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1">
-              <PlusCircleIcon class="h-5 w-5" /> Add
-            </button>
-            <button v-if="patient.id_number" @click="openModal('identifiers', true, { field1: patient.id_number })" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 flex items-center gap-1">
-              <PencilSquareIcon class="h-5 w-5" /> Edit
-            </button>
-          </div>
-        </div>
-
-        <!-- Visits -->
-        <div v-if="activeTab === 'visits'">
-          <h2 class="text-lg font-semibold mb-4">Visits</h2>
-          <p>No visits yet.</p>
-          <div class="flex gap-2 mt-4">
-            <button @click="openModal('visits')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1">
-              <PlusCircleIcon class="h-5 w-5" /> Add
-            </button>
-            <button @click="openModal('visits', true, { notes: 'Follow-up visit' })" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 flex items-center gap-1">
-              <PencilSquareIcon class="h-5 w-5" /> Edit
-            </button>
-          </div>
-        </div>
-
-        <!-- Vitals -->
-        <div v-if="activeTab === 'vitals'">
-          <h2 class="text-lg font-semibold mb-4">Vitals</h2>
-          <p>No vitals recorded.</p>
-          <div class="flex gap-2 mt-4">
-            <button @click="openModal('vitals')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1">
-              <PlusCircleIcon class="h-5 w-5" /> Add
-            </button>
-            <button @click="openModal('vitals', true, { field1: '120/80', field2: '37°C' })" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 flex items-center gap-1">
-              <PencilSquareIcon class="h-5 w-5" /> Edit
-            </button>
-          </div>
-        </div>
-
-        <!-- Billing -->
-        <div v-if="activeTab === 'billing'">
-          <h2 class="text-lg font-semibold mb-4">Billing</h2>
-          <p>No billing data.</p>
-          <div class="flex gap-2 mt-4">
-            <button @click="openModal('billing')" class="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 flex items-center gap-1">
-              <PlusCircleIcon class="h-5 w-5" /> Add
-            </button>
-            <button @click="openModal('billing', true, { field1: 500, field2: 'cash' })" class="px-4 py-2 bg-yellow-600 text-white rounded hover:bg-yellow-700 flex items-center gap-1">
-              <PencilSquareIcon class="h-5 w-5" /> Edit
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Modal -->
-    <div v-if="showModal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-      <div class="bg-white dark:bg-gray-800 rounded-lg shadow-lg w-full max-w-lg p-6 relative">
-        <h2 class="text-lg font-semibold mb-4">{{ modalTitle }}</h2>
-
-        <!-- Simple dynamic form -->
-        <form @submit.prevent="submitForm" class="space-y-4">
-          <!-- Basic -->
-          <div v-if="modalTab === 'basic'">
-            <label class="block text-sm font-medium">Marital Status</label>
-            <input v-model="form.field1" type="text" class="w-full border rounded px-3 py-2" />
+      <!-- Modal -->
+      <div v-if="showModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-lg w-full max-w-md">
+          <!-- Header -->
+          <div class="flex justify-between items-center mb-4">
+            <h2 class="font-semibold text-lg text-gray-800 dark:text-gray-100">Edit {{ currentTab }} Info</h2>
+            <button @click="closeModal" class="text-gray-500 hover:text-red-600 text-xl">✖</button>
           </div>
 
-          <!-- Identifiers -->
-          <div v-if="modalTab === 'identifiers'">
-            <label class="block text-sm font-medium">ID Number</label>
-            <input v-model="form.field1" type="text" class="w-full border rounded px-3 py-2" />
-          </div>
+          <!-- Form Fields -->
+          <div class="space-y-4">
+            <div v-if="currentTab === 'basic'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">First Name</label>
+              <input type="text" placeholder="First Name"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
 
-          <!-- Visits -->
-          <div v-if="modalTab === 'visits'">
-            <label class="block text-sm font-medium">Visit Notes</label>
-            <textarea v-model="form.notes" class="w-full border rounded px-3 py-2"></textarea>
-          </div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 mt-3">Last Name</label>
+              <input type="text" placeholder="Last Name"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+            </div>
 
-          <!-- Vitals -->
-          <div v-if="modalTab === 'vitals'">
-            <label class="block text-sm font-medium">Blood Pressure</label>
-            <input v-model="form.field1" type="text" class="w-full border rounded px-3 py-2" />
-            <label class="block text-sm font-medium mt-2">Temperature</label>
-            <input v-model="form.field2" type="text" class="w-full border rounded px-3 py-2" />
-          </div>
+            <div v-if="currentTab === 'identifiers'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">ID Number</label>
+              <input type="text" placeholder="ID Number"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
 
-          <!-- Billing -->
-          <div v-if="modalTab === 'billing'">
-            <label class="block text-sm font-medium">Amount</label>
-            <input v-model="form.field1" type="number" class="w-full border rounded px-3 py-2" />
-            <label class="block text-sm font-medium mt-2">Payment Mode</label>
-            <select v-model="form.field2" class="w-full border rounded px-3 py-2">
-              <option value="">Select</option>
-              <option value="cash">Cash</option>
-              <option value="insurance">Insurance</option>
-              <option value="mpesa">M-Pesa</option>
-            </select>
-          </div>
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 mt-3">Nationality</label>
+              <input type="text" placeholder="Nationality"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+            </div>
 
-          <!-- Shared Notes -->
-          <div>
-            <label class="block text-sm font-medium">Notes</label>
-            <textarea v-model="form.notes" class="w-full border rounded px-3 py-2"></textarea>
+            <div v-if="currentTab === 'medical'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date of Birth</label>
+              <input type="date"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1 mt-3">Blood Type</label>
+              <input type="text" placeholder="Blood Type"
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+            </div>
+
+            <div v-if="currentTab === 'visits'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visit Notes</label>
+              <textarea placeholder="Add visit notes..."
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+            </div>
+
+            <div v-if="currentTab === 'vitals'">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Date Recorded</label>
+                  <input type="datetime-local"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Visit No.</label>
+                  <input type="text" placeholder="Visit Number"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Weight (kg)</label>
+                  <input type="number" placeholder="Weight"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Height (cm)</label>
+                  <input type="number" placeholder="Height"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">BMI</label>
+                  <input type="text" placeholder="BMI"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Blood Pressure</label>
+                  <input type="text" placeholder="e.g. 120/80 mmHg"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Pulse (bpm)</label>
+                  <input type="number" placeholder="Pulse"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Respiratory
+                    Rate</label>
+                  <input type="number" placeholder="Respiratory Rate"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Temperature
+                    (°C)</label>
+                  <input type="number" placeholder="Temperature"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">SpO₂ (%)</label>
+                  <input type="number" placeholder="Oxygen Saturation"
+                    class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+              </div>
+
+              <!-- Full-width fields below -->
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Comments</label>
+                <textarea placeholder="Comments..."
+                  class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+              </div>
+
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Disability</label>
+                <select class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="NO">NO</option>
+                  <option value="YES">YES</option>
+                </select>
+              </div>
+
+              <div class="mt-4">
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Substance Use</label>
+                <select class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="NONE">NONE</option>
+                  <option value="ALCOHOL_USE">ALCOHOL_USE</option>
+                  <option value="TOBACCO_USE">TOBACCO_USE</option>
+                  <option value="DRUG_USE">DRUG_USE</option>
+                </select>
+              </div>
+            </div>
+
+
+            <div v-if="currentTab === 'billing'" class="space-y-4">
+              <!-- Simple Billing Details -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Billing Type
+                </label>
+                <select class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="Consultation">Consultation</option>
+                  <option value="Treatment">Treatment</option>
+                  <option value="Surgery">Surgery</option>
+                  <option value="Lab Tests">Lab Tests</option>
+                  <option value="Pharmacy">Pharmacy</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <!-- Insurance Info -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Insurance Provider
+                </label>
+                <select class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="Jubilee">Jubilee Insurance</option>
+                  <option value="AAR">AAR Insurance</option>
+                  <option value="NHIF">NHIF</option>
+                  <option value="Britam">Britam</option>
+                  <option value="CIC">CIC Insurance</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Policy Number
+                </label>
+                <input type="text" placeholder="e.g. POL-123456" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+              </div>
+
+              <!-- Coverage -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Coverage Type
+                </label>
+                <select class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="Full">Full Coverage</option>
+                  <option value="Partial">Partial Coverage</option>
+                  <option value="Co-pay">Co-pay</option>
+                  <option value="None">None</option>
+                </select>
+              </div>
+
+              <!-- Payment -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Payment Method
+                </label>
+                <select class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                  <option value="">Select...</option>
+                  <option value="Cash">Cash</option>
+                  <option value="Card">Credit/Debit Card</option>
+                  <option value="M-Pesa">M-Pesa</option>
+                  <option value="Bank Transfer">Bank Transfer</option>
+                  <option value="Cheque">Cheque</option>
+                  <option value="Insurance">Insurance</option>
+                </select>
+              </div>
+
+              <!-- Amount + Status -->
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Amount Due
+                  </label>
+                  <input type="number" placeholder="0.00" class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+               dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+                </div>
+
+                <div>
+                  <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                    Payment Status
+                  </label>
+                  <select class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+               dark:bg-gray-700 dark:border-gray-600 dark:text-white">
+                    <option value="">Select...</option>
+                    <option value="Pending">Pending</option>
+                    <option value="Paid">Paid</option>
+                    <option value="Partially Paid">Partially Paid</option>
+                    <option value="Overdue">Overdue</option>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Notes -->
+              <div>
+                <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                  Billing Notes
+                </label>
+                <textarea placeholder="Additional billing details..." class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 
+             dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+              </div>
+            </div>
+
+
+            <div v-if="currentTab === 'notes'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Notes</label>
+              <textarea placeholder="Update notes..."
+                class="w-full border rounded-lg p-2 focus:ring focus:ring-blue-300 dark:bg-gray-700 dark:border-gray-600 dark:text-white"></textarea>
+            </div>
+
+            <div v-if="currentTab === 'files'">
+              <label class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Upload File</label>
+              <input type="file"
+                class="w-full border rounded-lg p-2 dark:bg-gray-700 dark:border-gray-600 dark:text-white" />
+            </div>
           </div>
 
           <!-- Actions -->
-          <div class="flex justify-end gap-2 mt-4">
-            <button type="button" @click="showModal = false" class="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600">
-              Cancel
-            </button>
-            <button type="submit" class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
-              {{ isEditing ? 'Update' : 'Save' }}
-            </button>
+          <div class="flex justify-end mt-6 gap-2">
+            <button @click="closeModal"
+              class="px-4 py-2 bg-gray-400 text-white rounded hover:bg-gray-500">Cancel</button>
+            <button class="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">Save</button>
           </div>
-        </form>
+        </div>
       </div>
     </div>
   </AppLayout>

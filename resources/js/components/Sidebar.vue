@@ -1,9 +1,17 @@
 <script setup lang="ts">
 import { Link, usePage } from '@inertiajs/vue3'
-import { Home, Users, Activity, Settings, LogOut } from 'lucide-vue-next'
+import { Home, Users, Activity, Settings, LogOut, ClipboardList } from 'lucide-vue-next'
 
-// get the logged in user from Inertia shared props
-const page = usePage()
+// Define a User type (extend this later if needed)
+interface User {
+  id: number
+  name: string
+  email: string
+  role?: string
+}
+
+// Get the logged in user from Inertia shared props
+const page = usePage<{ auth: { user: User | null } }>()
 const user = page.props.auth.user
 </script>
 
@@ -24,6 +32,10 @@ const user = page.props.auth.user
       <template v-if="user?.role === 'admin'">
         <Link href="/patients" class="flex items-center gap-2 p-2 rounded hover:bg-gray-700">
           <Users class="w-4 h-4" /> Patients
+        </Link>
+
+        <Link href="/visits" class="flex items-center gap-2 p-2 rounded hover:bg-gray-700">
+          <ClipboardList class="w-4 h-4" /> Patients Visits
         </Link>
 
         <Link href="/triage" class="flex items-center gap-2 p-2 rounded hover:bg-gray-700">

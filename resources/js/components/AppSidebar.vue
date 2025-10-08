@@ -14,13 +14,26 @@ import {
 import { dashboard } from '@/routes';
 import { type NavItem } from '@/types';
 import { Link, usePage } from '@inertiajs/vue3';
-import { BookOpen, Folder, LayoutGrid, Users, Activity } from 'lucide-vue-next';
+import { 
+    BookOpen, 
+    Folder, 
+    LayoutGrid, 
+    Users, 
+    Activity, 
+    ClipboardList,
+    Stethoscope,
+    Syringe,
+    Microscope,
+    HeartPulse,
+    Shield,
+    FileText
+} from 'lucide-vue-next';
 import AppLogo from './AppLogo.vue';
 
 const page = usePage()
 const user = page.props.auth.user
 
-// default nav for all users
+// default nav
 const mainNavItems: NavItem[] = [
     {
         title: 'Dashboard',
@@ -38,6 +51,11 @@ if (user?.role === 'admin') {
             icon: Users,
         },
         {
+            title: 'Patients Visits',
+            href: '/visits',
+            icon: ClipboardList,
+        },
+        {
             title: 'Triage',
             href: '/triage',
             icon: Activity,
@@ -45,23 +63,32 @@ if (user?.role === 'admin') {
         {
             title: 'Consultations',
             href: '/consultations',
-            icon: Activity,
+            icon: Stethoscope,
         },
+        {
+            title: 'Laboratory',
+            href: '/laboratory',
+            icon: Microscope,
+        },
+        {
+            title: 'Pharmacy',
+            href: '/pharmacy',
+            icon: Syringe,
+        },
+        {
+            title: 'Radiology',
+            href: '/radiology',
+            icon: HeartPulse,
+        },
+        {
+            title: 'Billing',
+            href: '/billing',
+            icon: FileText,
+        },
+
     )
 }
 
-const footerNavItems: NavItem[] = [
-    {
-        title: 'Github Repo',
-        href: 'https://github.com/laravel/vue-starter-kit',
-        icon: Folder,
-    },
-    {
-        title: 'Documentation',
-        href: 'https://laravel.com/docs/starter-kits#vue',
-        icon: BookOpen,
-    },
-];
 </script>
 
 <template>
@@ -81,13 +108,19 @@ const footerNavItems: NavItem[] = [
 
         <!-- Navigation (role aware) -->
         <SidebarContent>
-            <NavMain :items="mainNavItems" />
+            <div class="px-2 py-4 space-y-3"> 
+                <!-- Added space between nav items -->
+                <NavMain :items="mainNavItems" />
+            </div>
         </SidebarContent>
 
         <!-- Footer -->
         <SidebarFooter>
-            <NavFooter :items="footerNavItems" />
-            <NavUser />
+            <div class="space-y-2">
+               <NavFooter :items="items || []" />
+
+                <NavUser />
+            </div>
         </SidebarFooter>
     </Sidebar>
 

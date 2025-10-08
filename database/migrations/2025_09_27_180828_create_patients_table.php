@@ -20,7 +20,7 @@ return new class extends Migration {
             $table->date('dob');
             $table->string('blood_type')->nullable();
             $table->string('marital_status')->nullable();
-            $table->string('id_number');
+            $table->string('id_number')->nullable()->change();
             $table->string('nationality');
             $table->string('residence');
             $table->string('city')->nullable();
