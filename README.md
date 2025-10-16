@@ -2,7 +2,7 @@
 
 This is a Hospital Management System built with **Laravel 12** (backend) and **Vue 3** (frontend) using Inertia.js and Tailwind CSS. The system provides role-based access and features for administrators, staff, and other users.
 
-(https://github.com/gayhonipeter26/Hospital-Management-System/blob/main/Screenshot%202025-10-16%20110142.png?raw=true)
+![image alt](https://github.com/gayhonipeter26/Hospital-Management-System/blob/main/Screenshot%202025-10-16%20110142.png?raw=true)
 
 ## Features
 
